@@ -7,6 +7,8 @@ sed -i '/^\[main\]/a max_parallel_downloads=10' /etc/dnf/dnf.conf
 
 
 ### Install packages
+dnf5.real -y install \
+    jq
 
 ### BASE PACKAGES
 dnf5.real -y install \
@@ -23,6 +25,9 @@ dnf5.real -y install \
     kitty \
     fastfetch \
     lolcat lsd bat fzf 
+
+dnf5.real -y install \
+    rakuos-software-qt
 
 # Nautilus open any terminal extension
 curl -Lo /etc/yum.repos.d/nautilus-open-any-terminal.repo \
@@ -66,6 +71,11 @@ cp -rf /ctx/dot_config/* /etc/skel/.config/
 # Neovim
 git clone --depth 1 https://github.com/AstroNvim/template /etc/skel/.config/nvim
 rm -rf /etc/skel/.config/nvim/.git
+
+# Accept this repo as insecure for bootc pull
+jq '.transports.docker["ghcr.io/thegabriele97"] = [{"type": "insecureAcceptAnything"}]' \
+    /etc/containers/policy.json > /tmp/policy.json
+mv /tmp/policy.json /etc/containers/policy.json
 
 dnf5.real -y remove \
     waybar
