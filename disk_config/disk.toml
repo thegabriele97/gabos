@@ -1,6 +1,6 @@
 [[customizations.filesystem]]
 mountpoint = "/"
-minsize = "20 GiB"
+minsize = "40 GiB"
 
 [[customizations.user]]
 name = "user"

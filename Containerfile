@@ -3,7 +3,7 @@ FROM scratch AS ctx
 COPY build_files /
 
 # Base Image
-FROM ghcr.io/rakuos/rakuos-base:latest
+FROM quay.io/rakuos/rakuos-base:latest
 
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:latest
@@ -35,6 +35,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/build.sh
     
+RUN sed -i 's/^ID=.*/ID=fedora/' /etc/os-release
+
 ### LINTING
 ## Verify final image and contents are correct.
 RUN bootc container lint

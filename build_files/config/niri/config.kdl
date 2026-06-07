@@ -338,10 +338,10 @@ window-rule {
 }
 
 window-rule {
-    geometry-corner-radius 16
+    geometry-corner-radius 12
     clip-to-geometry true
 
-    opacity 0.9
+    opacity 0.7
 
     background-effect {
       blur true
@@ -363,10 +363,6 @@ window-rule {
 
 // Example: enable rounded corners for all windows.
 // (This example rule is commented out with a "/-" in front.)
-window-rule {
-    geometry-corner-radius 12
-    clip-to-geometry true
-}
 
 binds {
     // Keys consist of modifiers separated by + signs, followed by an XKB key name
@@ -384,7 +380,7 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
-    Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
+    Mod+T hotkey-overlay-title="Open a Terminal: Kitty" { spawn "kitty"; }
     // Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
     Mod+D { spawn "qs" "-c" "noctalia-shell" "ipc" "call" "launcher" "toggle"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
@@ -655,7 +651,5 @@ binds {
 
 }
 
-include "dms/binds.kdl"
-include "dms/outputs.kdl"
-include "dms/windowrules.kdl"
-include "dms/cursor.kdl"
+// include DankMaterialShell stuff
+include "dms.kdl"

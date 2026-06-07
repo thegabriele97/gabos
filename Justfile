@@ -197,6 +197,25 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
 # Example: just _rebuild-bib localhost/fedora latest qcow2 disk_config/disk.toml
 _rebuild-bib $target_image $tag $type $config: (build target_image tag) && (_build-bib target_image tag type config)
 
+image_ref     := "localhost/gabos:latest"
+titanoboa_dir := justfile_directory() / ".titanoboa"
+iso_out       := justfile_directory() / "output.iso"
+
+# Clona Titanoboa se non presente (invocato automaticamente)
+[private]
+_titanoboa-clone:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d "{{ titanoboa_dir }}/.git" ]; then
+        echo "→ Cloning Titanoboa..."
+        git clone --depth=1 https://github.com/ublue-os/titanoboa "{{ titanoboa_dir }}"
+    fi
+
+# Aggiorna Titanoboa all'ultima versione di main
+titanoboa-update: _titanoboa-clone
+    git -C "{{ titanoboa_dir }}" fetch --depth=1 origin main
+    git -C "{{ titanoboa_dir }}" reset --hard origin/main
+
 # Build a QCOW2 virtual machine image
 [group('Build Virtal Machine Image')]
 build-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "qcow2" "disk_config/disk.toml")
@@ -205,9 +224,64 @@ build-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_bui
 [group('Build Virtal Machine Image')]
 build-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "raw" "disk_config/disk.toml")
 
-# Build an ISO virtual machine image
+# Build an anaconda installer ISO via bootc-image-builder.
+# BROKEN: upstream blockers (bootc-image-builder#1188 + bazzite#3418). Prefer
+# `build-iso-live` (titanoboa) below. Kept for if/when upstream is fixed.
 [group('Build Virtal Machine Image')]
-build-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "iso" "disk_config/iso.toml")
+build-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "iso" "disk_config/iso-kde.toml")
+
+# Build ISO locale via Titanoboa (richiede sudo internamente)
+# Parametri:
+#   tag         — tag GHCR dell'immagine         (default: latest)
+#   compression — squashfs | erofs               (default: squashfs)
+#   kargs       — kernel args extra, CSV          (default: NONE)
+#   livesys     — 0 = disabilitato (Niri/custom)  (default: 0)
+build-iso-live tag="latest" compression="squashfs" kargs="NONE" livesys="0": _titanoboa-clone
+    #!/usr/bin/env bash
+    set -euo pipefail
+    JUST="$(which just)"
+    image="{{ image_ref }}:{{ tag }}"
+    echo "→ Build ISO per: $image"
+    sudo "$JUST" \
+        --justfile "{{ titanoboa_dir }}/Justfile" \
+        --working-directory "{{ titanoboa_dir }}" \
+        build \
+            "$image" \
+            "{{ livesys }}" \
+            "none" \
+            "{{ compression }}" \
+            "{{ kargs }}"
+    # Titanoboa deposita l'ISO in titanoboa_dir/
+    if [ -f "{{ titanoboa_dir }}/output.iso" ]; then
+        mv "{{ titanoboa_dir }}/output.iso" "{{ iso_out }}"
+        echo "✓ ISO pronta: {{ iso_out }}"
+        ls -lh "{{ iso_out }}"
+    else
+        echo "✗ output.iso non trovata in {{ titanoboa_dir }}" >&2
+        exit 1
+    fi
+
+# Testa l'ISO in QEMU (non richiede root)
+test-iso iso=iso_out: _titanoboa-clone
+    just \
+        --justfile "{{ titanoboa_dir }}/Justfile" \
+        --working-directory "{{ titanoboa_dir }}" \
+        vm "{{ iso }}"
+
+# Pulisce solo la work/ dir di Titanoboa (conserva l'ISO)
+clean-iso-work:
+    #!/usr/bin/env bash
+    JUST="$(which just)"
+    sudo "$JUST" \
+        --justfile "{{ titanoboa_dir }}/Justfile" \
+        --working-directory "{{ titanoboa_dir }}" \
+        clean
+    echo "✓ Work dir ripulita"
+
+# Rimuove tutto: work/ + ISO finale
+clean-iso: clean-iso-work
+    rm -f "{{ iso_out }}"
+    echo "✓ ISO rimossa"
 
 # Rebuild a QCOW2 virtual machine image
 [group('Build Virtal Machine Image')]
