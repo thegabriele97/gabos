@@ -56,6 +56,20 @@ fi
 rm -f /etc/localtime
 systemd-firstboot --timezone UTC
 
+# greetd autologin
+cat > /etc/greetd/config.toml <<'EOF'
+[terminal]
+vt = 1
+
+[default_session]
+command = "niri-session"
+user = "liveuser"
+
+[initial_session]
+command = "niri-session"
+user = "liveuser"
+EOF
+
 # / in a booted live ISO is an overlayfs with upperdir pointed somewhere under /run
 # This means that /var/tmp is also technically under /run.
 # /run is of course a tmpfs, but set with quite a small size.
