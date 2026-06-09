@@ -66,7 +66,8 @@ ln -s /usr/lib/systemd/user/dms.service /etc/skel/.config/systemd/user/graphical
 
 ## USER FILES (DOT FILES)
 mkdir -p /etc/skel/.config
-cp -rf /ctx/dot_config/* /etc/skel/.config/
+# cp -rf /ctx/dot_config/* /etc/skel/.config/
+cp -rf /usr/share/gabos/gdots/dot_config/* /etc/skel/.config/
 
 # Neovim
 git clone --depth 1 https://github.com/AstroNvim/template /etc/skel/.config/nvim

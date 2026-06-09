@@ -84,7 +84,7 @@ Description=Larger tmpfs for /var/tmp on live system
 What=tmpfs
 Where=/var/tmp
 Type=tmpfs
-Options=size=50%%,nr_inodes=1m,x-systemd.graceful-option=usrquota
+Options=size=75%%,nr_inodes=1m,x-systemd.graceful-option=usrquota
 
 [Install]
 WantedBy=local-fs.target
