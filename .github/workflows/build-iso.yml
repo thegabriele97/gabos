@@ -44,15 +44,12 @@ jobs:
         run: |
           sudo podman pull ghcr.io/thegabriele97/gabos:latest
           sudo podman images
-          echo "Available disk space after pulling and saving image:"
+          echo "Available disk space after pulling:"
           df -h
-
-      - name: Salva immagine come oci-archive
-        run: |
           sudo podman save --format oci-archive \
             ghcr.io/thegabriele97/gabos:latest \
             -o installer/base-image.oci.tar
-          echo "Available disk space after pulling and saving image:"
+          echo "Available disk space after saving image:"
           df -h
 
       - name: Build gabos_installer
