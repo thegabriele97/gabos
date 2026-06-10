@@ -41,7 +41,7 @@ jobs:
           sudo mkfs.btrfs -f /mnt/podman-storage.img
           sudo podman system reset --force
           sudo systemctl stop podman.service
-          sudo mount -o compress-force=zstd:2 /mnt/podman-storage.img /var/lib/containers/storage
+          sudo mount -o compress-force=zstd:1 /mnt/podman-storage.img /var/lib/containers/storage
           sudo systemctl start podman.service
 
       - name: Checkout
@@ -89,27 +89,29 @@ jobs:
           df -h
 
       - name: Build ISO with Titanoboa
+        id: iso_build_titanoboa
         uses: thegabriele97/titanoboa@v1
         with:
           image-ref: localhost/gabos_installer:latest
           iso-dest: output/gabos-${{ github.run_number }}.iso
 
-      # - name: Clone Titanoboa
-      #   run: |
-      #     git clone --depth=1 https://github.com/ublue-os/titanoboa .titanoboa
+      - name: Move ISOs to Upload Directory
+        id: upload-directory
+        shell: bash
+        run: |
+          ISO_UPLOAD_DIR=${{ github.workspace }}/upload
+          ISO_PATH=${{ steps.iso_build_titanoboa.outputs.iso-dest }}
+          ISO_NAME=$(basename ${ISO_PATH})
 
-      # - name: Build ISO con Titanoboa
-      #   run: |
-      #       cd .titanoboa
-      #       sudo TITANOBOA_CTR_IMAGE="localhost/gabos_installer:latest" ./main.sh
-      #       sudo ls -lh .titanoboa/output/
-      #       sudo chmod -R 666 .titanoboa/output
-      #       sudo chown -R $USER:$USER .titanoboa/output
-      #       sudo ls -lh .titanoboa/output/
+          mkdir -p ${ISO_UPLOAD_DIR}
+          mv ${ISO_PATH} ${ISO_UPLOAD_DIR}
+          (cd ${ISO_UPLOAD_DIR} && sha256sum ${ISO_NAME} | tee ${ISO_NAME}-CHECKSUM)
+          echo "iso-upload-dir=${ISO_UPLOAD_DIR}" >> $GITHUB_OUTPUT
 
-      - name: Upload ISO come artifact
+      - name: Upload ISO Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gabos-iso-${{ github.run_number }}.iso
-          path: output/gabos-${{ github.run_number }}.iso
+          name: gabos-iso-${{ github.run_number }}
+          path: ${{ steps.upload-directory.outputs.iso-upload-dir }}
           retention-days: 10
+          if-no-files-found: error
