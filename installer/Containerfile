@@ -1,10 +1,13 @@
 # run with --cap-add sys_admin --security-opt label=disable --squash
 
-FROM localhost/image-template:latest
+ARG BASE_IMAGE=localhost/image-template:latest
+FROM ${BASE_IMAGE}
 
 # Salva il tag originale
-COPY base-image.oci.tar /tmp/base-image.oci.tar
+# COPY base-image.oci.tar /tmp/base-image.oci.tar
 
 COPY ./src /src
-RUN --mount=type=cache,target=/var/tmp/libdnf5,id=libdnf5 /src/build.sh
+RUN --mount=type=cache,target=/var/tmp/libdnf5,id=libdnf5 --mount=type=bind,source=./base-image.oci.tar,destination=/tmp/base-image.oci.tar /src/build.sh
+
+
 RUN rm -fr /src

@@ -19,7 +19,7 @@ podman load -i /tmp/base-image.oci.tar
 
 # Prune unused data, keep loaded image
 podman system prune -f
-rm -f /tmp/base-image.oci.tar
+# rm -f /tmp/base-image.oci.tar
 
 echo "================================================================================"
 podman images

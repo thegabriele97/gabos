@@ -2,6 +2,11 @@ export image_name := env("IMAGE_NAME", "image-template") # output image name, us
 export default_tag := env("DEFAULT_TAG", "latest")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
 
+installer_dir   := justfile_directory() / "installer"
+installer_image := "localhost/gabos_installer:latest"
+titanoboa_dir   := justfile_directory() / ".titanoboa"
+iso_out         := justfile_directory() / "output" / "output.iso"
+
 alias build-vm := build-qcow2
 alias rebuild-vm := rebuild-qcow2
 alias run-vm := run-vm-qcow2
@@ -68,23 +73,6 @@ sudoif command *args:
     }
     sudoif {{ command }} {{ args }}
 
-# This Justfile recipe builds a container image using Podman.
-#
-# Arguments:
-#   $target_image - The tag you want to apply to the image (default: $image_name).
-#   $tag - The tag for the image (default: $default_tag).
-#
-# The script constructs the version string using the tag and the current date.
-# If the git working directory is clean, it also includes the short SHA of the current HEAD.
-#
-# just build $target_image $tag
-#
-# Example usage:
-#   just build aurora lts
-#
-# This will build an image 'aurora:lts' with DX and GDX enabled.
-#
-
 # Build the image using the specified parameters
 build $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
@@ -100,34 +88,16 @@ build $target_image=image_name $tag=default_tag:
         --tag "${target_image}:${tag}" \
         .
 
-# Command: _rootful_load_image
-# Description: This script checks if the current user is root or running under sudo. If not, it attempts to resolve the image tag using podman inspect.
-#              If the image is found, it loads it into rootful podman. If the image is not found, it pulls it from the repository.
-#
-# Parameters:
-#   $target_image - The name of the target image to be loaded or pulled.
-#   $tag - The tag of the target image to be loaded or pulled. Default is 'default_tag'.
-#
-# Example usage:
-#   _rootful_load_image my_image latest
-#
-# Steps:
-# 1. Check if the script is already running as root or under sudo.
-# 2. Check if target image is in the non-root podman container storage)
-# 3. If the image is found, load it into rootful podman using podman scp.
-# 4. If the image is not found, pull it from the remote repository into reootful podman.
-
+# Copia immagine dallo store utente a quello root
 _rootful_load_image $target_image=image_name $tag=default_tag:
     #!/usr/bin/bash
     set -eoux pipefail
 
-    # Check if already running as root or under sudo
     if [[ -n "${SUDO_USER:-}" || "${UID}" -eq "0" ]]; then
         echo "Already root or running under sudo, no need to load image from user podman."
         exit 0
     fi
 
-    # Try to resolve the image tag using podman inspect
     set +e
     resolved_tag=$(podman inspect -t image "${target_image}:${tag}" | jq -r '.[].RepoTags.[0]')
     return_code=$?
@@ -136,28 +106,17 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
     USER_IMG_ID=$(podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
 
     if [[ $return_code -eq 0 ]]; then
-        # If the image is found, load it into rootful podman
         ID=$(just sudoif podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
         if [[ "$ID" != "$USER_IMG_ID" ]]; then
-            # If the image ID is not found or different from user, copy the image from user podman to root podman
             COPYTMP=$(mktemp -p "${PWD}" -d -t _build_podman_scp.XXXXXXXXXX)
             just sudoif TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
             rm -rf "${COPYTMP}"
         fi
     else
-        # If the image is not found, pull it from the repository
         just sudoif podman pull "${target_image}:${tag}"
     fi
 
 # Build a bootc bootable image using Bootc Image Builder (BIB)
-# Converts a container image to a bootable image
-# Parameters:
-#   target_image: The name of the image to build (ex. localhost/fedora)
-#   tag: The tag of the image to build (ex. latest)
-#   type: The type of image to build (ex. qcow2, raw, iso)
-#   config: The configuration file to use for the build (default: disk_config/disk.toml)
-
-# Example: just _rebuild-bib localhost/fedora latest qcow2 disk_config/disk.toml
 _build-bib $target_image $tag $type $config: (_rootful_load_image target_image tag)
     #!/usr/bin/env bash
     set -euo pipefail
@@ -187,21 +146,9 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
     sudo rmdir $BUILDTMP
     sudo chown -R $USER:$USER output/
 
-# Podman builds the image from the Containerfile and creates a bootable image
-# Parameters:
-#   target_image: The name of the image to build (ex. localhost/fedora)
-#   tag: The tag of the image to build (ex. latest)
-#   type: The type of image to build (ex. qcow2, raw, iso)
-#   config: The configuration file to use for the build (deafult: disk_config/disk.toml)
-
-# Example: just _rebuild-bib localhost/fedora latest qcow2 disk_config/disk.toml
 _rebuild-bib $target_image $tag $type $config: (build target_image tag) && (_build-bib target_image tag type config)
 
-image_ref     := "localhost/gabos:latest"
-titanoboa_dir := justfile_directory() / ".titanoboa"
-iso_out       := justfile_directory() / "output.iso"
-
-# Clona Titanoboa se non presente (invocato automaticamente)
+# Clona Titanoboa se non presente
 [private]
 _titanoboa-clone:
     #!/usr/bin/env bash
@@ -216,42 +163,60 @@ titanoboa-update: _titanoboa-clone
     git -C "{{ titanoboa_dir }}" fetch --depth=1 origin main
     git -C "{{ titanoboa_dir }}" reset --hard origin/main
 
-# Build a QCOW2 virtual machine image
-[group('Build Virtal Machine Image')]
+# Build QCOW2
+[group('Build Virtual Machine Image')]
 build-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "qcow2" "disk_config/disk.toml")
 
-# Build a RAW virtual machine image
-[group('Build Virtal Machine Image')]
+# Build RAW
+[group('Build Virtual Machine Image')]
 build-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "raw" "disk_config/disk.toml")
 
-# Build an anaconda installer ISO via bootc-image-builder.
-# BROKEN: upstream blockers (bootc-image-builder#1188 + bazzite#3418). Prefer
-# `build-iso-live` (titanoboa) below. Kept for if/when upstream is fixed.
-[group('Build Virtal Machine Image')]
-build-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "iso" "disk_config/iso-kde.toml")
+# Build ISO via bootc-image-builder (upstream bloccato, preferire build-iso-live)
+[group('Build Virtual Machine Image')]
+build-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "iso" "disk_config/iso.toml")
 
-# Build ISO locale via Titanoboa (richiede sudo internamente)
-# Parametri:
-#   tag         — tag GHCR dell'immagine         (default: latest)
-#   compression — squashfs | erofs               (default: squashfs)
-#   kargs       — kernel args extra, CSV          (default: NONE)
-#   livesys     — 0 = disabilitato (Niri/custom)  (default: 0)
-build-iso-live tag="latest" compression="squashfs" kargs="NONE" livesys="0": _titanoboa-clone
+# Build ISO live via Titanoboa:
+# 1) builda image-template
+# 2) salva oci-archive in installer/
+# 3) carica nel root store + builda gabos_installer
+# 4) rimuove il dump
+# 5) genera la ISO in output/
+[group('Build Virtual Machine Image')]
+build-iso-live tag=default_tag compression="squashfs" kargs="NONE": _titanoboa-clone (build image_name tag)
     #!/usr/bin/env bash
     set -euo pipefail
-    JUST="$(which just)"
-    image="{{ image_ref }}:{{ tag }}"
-    echo "→ Build ISO per: $image"
-    sudo "$JUST" \
-        --justfile "{{ titanoboa_dir }}/Justfile" \
-        --working-directory "{{ titanoboa_dir }}" \
-        build \
-            "$image" \
-            "{{ livesys }}" \
-            "none" \
-            "{{ compression }}" \
-            "{{ kargs }}"
-    # Titanoboa deposita l'ISO in titanoboa_dir/
+
+    # Step 1: salva immagine pulita come oci-archive per l'installer
+    echo "→ [1/4] Salvo image-template in installer/base-image.oci.tar..."
+    podman save --format oci-archive \
+        "localhost/{{ image_name }}:{{ tag }}" \
+        -o "{{ installer_dir }}/base-image.oci.tar"
+
+    # Step 2: carica oci-archive nel root store + build gabos_installer
+    echo "→ [2/4] Carico nel root store e build gabos_installer..."
+    sudo podman load -i "{{ installer_dir }}/base-image.oci.tar"
+
+    # Step 3: remove image from user store to avoid confusion, since installer will load it again from root store
+    podman rmi "localhost/{{ image_name }}:{{ tag }}" || true
+
+    # Step 4: builda installer con l'oci-archive già presente nel root store
+    sudo podman build \
+        --cap-add sys_admin \
+        --security-opt label=disable \
+        --squash \
+        -t "{{ installer_image }}" \
+        "{{ installer_dir }}"
+
+    # Step 3: rimuovi il dump ora che non serve più
+    echo "→ [3/4] Rimuovo base-image.oci.tar..."
+    rm -f "{{ installer_dir }}/base-image.oci.tar"
+
+    # Step 4: build ISO con titanoboa
+    echo "→ [4/4] Build ISO con Titanoboa..."
+    cd "{{ titanoboa_dir }}"
+    sudo TITANOBOA_CTR_IMAGE="{{ installer_image }}" ./main.sh
+
+    mkdir -p "{{ justfile_directory() }}/output"
     if [ -f "{{ titanoboa_dir }}/output.iso" ]; then
         mv "{{ titanoboa_dir }}/output.iso" "{{ iso_out }}"
         echo "✓ ISO pronta: {{ iso_out }}"
@@ -261,21 +226,17 @@ build-iso-live tag="latest" compression="squashfs" kargs="NONE" livesys="0": _ti
         exit 1
     fi
 
-# Testa l'ISO in QEMU (non richiede root)
+# Testa l'ISO in QEMU
 test-iso iso=iso_out: _titanoboa-clone
-    just \
-        --justfile "{{ titanoboa_dir }}/Justfile" \
-        --working-directory "{{ titanoboa_dir }}" \
-        vm "{{ iso }}"
+    #!/usr/bin/env bash
+    cd "{{ titanoboa_dir }}"
+    just vm "{{ iso }}"
 
 # Pulisce solo la work/ dir di Titanoboa (conserva l'ISO)
-clean-iso-work:
+clean-iso-work: _titanoboa-clone
     #!/usr/bin/env bash
-    JUST="$(which just)"
-    sudo "$JUST" \
-        --justfile "{{ titanoboa_dir }}/Justfile" \
-        --working-directory "{{ titanoboa_dir }}" \
-        clean
+    cd "{{ titanoboa_dir }}"
+    sudo just clean
     echo "✓ Work dir ripulita"
 
 # Rimuove tutto: work/ + ISO finale
@@ -283,35 +244,32 @@ clean-iso: clean-iso-work
     rm -f "{{ iso_out }}"
     echo "✓ ISO rimossa"
 
-# Rebuild a QCOW2 virtual machine image
-[group('Build Virtal Machine Image')]
+# Rebuild QCOW2
+[group('Build Virtual Machine Image')]
 rebuild-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "qcow2" "disk_config/disk.toml")
 
-# Rebuild a RAW virtual machine image
-[group('Build Virtal Machine Image')]
+# Rebuild RAW
+[group('Build Virtual Machine Image')]
 rebuild-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "raw" "disk_config/disk.toml")
 
-# Rebuild an ISO virtual machine image
-[group('Build Virtal Machine Image')]
+# Rebuild ISO
+[group('Build Virtual Machine Image')]
 rebuild-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "iso" "disk_config/iso.toml")
 
-# Run a virtual machine with the specified image type and configuration
+# Run VM
 _run-vm $target_image $tag $type $config:
     #!/usr/bin/bash
     set -eoux pipefail
 
-    # Determine the image file based on the type
     image_file="output/${type}/disk.${type}"
     if [[ $type == iso ]]; then
         image_file="output/bootiso/install.iso"
     fi
 
-    # Build the image if it does not exist
     if [[ ! -f "${image_file}" ]]; then
         just "build-${type}" "$target_image" "$tag"
     fi
 
-    # Determine an available port to use
     port=8006
     while grep -q :${port} <<< $(ss -tunalp); do
         port=$(( port + 1 ))
@@ -319,7 +277,6 @@ _run-vm $target_image $tag $type $config:
     echo "Using Port: ${port}"
     echo "Connect to http://localhost:${port}"
 
-    # Set up the arguments for running the VM
     run_args=()
     run_args+=(--rm --privileged)
     run_args+=(--pull=newer)
@@ -333,27 +290,22 @@ _run-vm $target_image $tag $type $config:
     run_args+=(--volume "${PWD}/${image_file}":"/boot.${type}")
     run_args+=(docker.io/qemux/qemu)
 
-    # Run the VM and open the browser to connect
     (sleep 30 && xdg-open http://localhost:"$port") &
     podman run "${run_args[@]}"
 
-# Run a virtual machine from a QCOW2 image
-[group('Run Virtal Machine')]
+[group('Run Virtual Machine')]
 run-vm-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-vm target_image tag "qcow2" "disk_config/disk.toml")
 
-# Run a virtual machine from a RAW image
-[group('Run Virtal Machine')]
+[group('Run Virtual Machine')]
 run-vm-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-vm target_image tag "raw" "disk_config/disk.toml")
 
-# Run a virtual machine from an ISO
-[group('Run Virtal Machine')]
+[group('Run Virtual Machine')]
 run-vm-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-vm target_image tag "iso" "disk_config/iso.toml")
 
-# Run a virtual machine using systemd-vmspawn
-[group('Run Virtal Machine')]
+# Run VM con systemd-vmspawn
+[group('Run Virtual Machine')]
 spawn-vm rebuild="0" type="qcow2" ram="6G":
     #!/usr/bin/env bash
-
     set -euo pipefail
 
     [ "{{ rebuild }}" -eq 1 ] && echo "Rebuilding the ISO" && just build-vm {{ rebuild }} {{ type }}
@@ -367,27 +319,22 @@ spawn-vm rebuild="0" type="qcow2" ram="6G":
       --vsock=false --pass-ssh-key=false \
       -i ./output/**/*.{{ type }}
 
-
-# Runs shell check on all Bash scripts
+# Lint scripts con shellcheck
 lint:
     #!/usr/bin/env bash
     set -eoux pipefail
-    # Check if shellcheck is installed
     if ! command -v shellcheck &> /dev/null; then
         echo "shellcheck could not be found. Please install it."
         exit 1
     fi
-    # Run shellcheck on all Bash scripts
     /usr/bin/find . -iname "*.sh" -type f -exec shellcheck "{}" ';'
 
-# Runs shfmt on all Bash scripts
+# Format scripts con shfmt
 format:
     #!/usr/bin/env bash
     set -eoux pipefail
-    # Check if shfmt is installed
     if ! command -v shfmt &> /dev/null; then
         echo "shfmt could not be found. Please install it."
         exit 1
     fi
-    # Run shfmt on all Bash scripts
     /usr/bin/find . -iname "*.sh" -type f -exec shfmt --write "{}" ';'

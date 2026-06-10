@@ -110,7 +110,7 @@ plymouth-set-default-theme spinner
 # EOF
 
 ## CLEAN UP
-dnf5 -y clean all
+dnf5.real -y clean all
 rm -rf /run/dnf /run/selinux-policy
 rm -rf /var/lib/dnf
 

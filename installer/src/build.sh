@@ -6,6 +6,9 @@ set -exo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# List -l base image tar
+ls -l /tmp/base-image.oci.tar
+
 # Create the directory that /root is symlinked to
 mkdir -p "$(realpath /root)"
 
@@ -96,4 +99,6 @@ mkdir -p /usr/lib/bootc-image-builder
 cp /src/iso.yaml /usr/lib/bootc-image-builder/iso.yaml
 
 # Clean up dnf5.real cache to save space
-# dnf5.real clean all
+dnf5.real clean all
+rm -rf /run/dnf /run/selinux-policy
+rm -rf /var/lib/dnf
