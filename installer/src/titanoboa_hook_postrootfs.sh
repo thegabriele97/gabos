@@ -30,9 +30,10 @@ dnf5.real install -qy --allowerasing anaconda-live libblockdev-{btrfs,lvm,dm}
 mkdir -p /var/lib/rpm-state
 
 # Kickstart base
-echo "Using base image: $BASE_IMAGE"
+base_image=$(podman images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
+echo "Using base image: $base_image"
 cat <<EOF >> /usr/share/anaconda/interactive-defaults.ks
-ostreecontainer --url=$BASE_IMAGE --transport=containers-storage --no-signature-verification
+ostreecontainer --url=$base_image --transport=containers-storage --no-signature-verification
 EOF
 
 cat > /usr/share/applications/liveinst.desktop <<EOF
