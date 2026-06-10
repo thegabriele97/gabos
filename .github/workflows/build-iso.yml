@@ -14,38 +14,56 @@ on:
 
 jobs:
   build-iso:
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update -q
           sudo apt-get install -y podman
 
-      - name: Maximize build space
-        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
+      - name: Show disk space (before)
+        run: sudo df -h
 
-      - name: Clone Titanoboa
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+
+      - name: Show disk space (after)
+        run: sudo df -h
+
+      - name: Mount Container Storage BTRFS Loopback
         run: |
-          git clone --depth=1 https://github.com/ublue-os/titanoboa .titanoboa
+          sudo truncate -s 70G /mnt/podman-storage.img
+          sudo mkfs.btrfs -f /mnt/podman-storage.img
+          sudo podman system reset --force
+          sudo systemctl stop podman.service
+          sudo mount -o compress-force=zstd:2 /mnt/podman-storage.img /var/lib/containers/storage
+          sudo systemctl start podman.service
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # - name: Maximize build space
+      #   uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
       - name: Login to GHCR
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io \
             -u "${{ github.actor }}" --password-stdin
 
-      - name: Pull immagine remota e salva come oci-archive
+      - name: Pull immagine remota 
         run: |
           sudo podman pull ghcr.io/thegabriele97/gabos:latest
           sudo podman images
           echo "Available disk space after pulling:"
           df -h
+
+      - name: Salva immagine come oci-archive
+        run: |
           sudo podman save --format oci-archive \
             ghcr.io/thegabriele97/gabos:latest \
             -o installer/base-image.oci.tar
@@ -61,24 +79,37 @@ jobs:
             -t localhost/gabos_installer:latest \
             --build-arg BASE_IMAGE=ghcr.io/thegabriele97/gabos:latest \
             installer/
+          echo "Available disk space after building installer image:"
+          df -h
 
       - name: Rimuovi oci-archive
-        run: rm -f installer/base-image.oci.tar
-
-      - name: Build ISO con Titanoboa
         run: |
-            cd .titanoboa
-            sudo TITANOBOA_CTR_IMAGE="localhost/gabos_installer:latest" ./main.sh
+          rm -f installer/base-image.oci.tar
+          echo "Available disk space after removing oci-archive:"
+          df -h
 
-      - name: Sposta ISO in output/
-        run: |
-          mkdir -p output
-          mv .titanoboa/output.iso output/gabos-${{ github.run_number }}.iso
-          ls -lh output/
+      - name: Build ISO with Titanoboa
+        uses: thegabriele97/titanoboa@v1
+        with:
+          image-ref: localhost/gabos_installer:latest
+          iso-dest: output/gabos-${{ github.run_number }}.iso
+
+      # - name: Clone Titanoboa
+      #   run: |
+      #     git clone --depth=1 https://github.com/ublue-os/titanoboa .titanoboa
+
+      # - name: Build ISO con Titanoboa
+      #   run: |
+      #       cd .titanoboa
+      #       sudo TITANOBOA_CTR_IMAGE="localhost/gabos_installer:latest" ./main.sh
+      #       sudo ls -lh .titanoboa/output/
+      #       sudo chmod -R 666 .titanoboa/output
+      #       sudo chown -R $USER:$USER .titanoboa/output
+      #       sudo ls -lh .titanoboa/output/
 
       - name: Upload ISO come artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gabos-iso-${{ github.run_number }}
+          name: gabos-iso-${{ github.run_number }}.iso
           path: output/gabos-${{ github.run_number }}.iso
           retention-days: 10
