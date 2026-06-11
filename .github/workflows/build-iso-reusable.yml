@@ -60,11 +60,11 @@ jobs:
       # large layers don't exhaust the runner's default ext4 partition.
       - name: Mount container storage btrfs loopback
         run: |
-          sudo truncate -s 100G /mnt/podman-storage.img
+          sudo truncate -s 150G /mnt/podman-storage.img
           sudo mkfs.btrfs -f /mnt/podman-storage.img
           sudo podman system reset --force
           sudo systemctl stop podman.service
-          sudo mount -o compress-force=zstd:3 /mnt/podman-storage.img /var/lib/containers/storage
+          sudo mount -o compress-force=zstd:5 /mnt/podman-storage.img /var/lib/containers/storage
           sudo systemctl start podman.service
 
       - name: Checkout
