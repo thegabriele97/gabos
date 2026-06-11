@@ -1,0 +1,6 @@
+
+// Here you can add your custom settings for Niri.
+// This file is included by "config.kdl" after all the default settings, so you can override any of them here if you want to.
+
+// Note that this is the last file included by the config so this one overrides all previous settings, including those from DMS. 
+

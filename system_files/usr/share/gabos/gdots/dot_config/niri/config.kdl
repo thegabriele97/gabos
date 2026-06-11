@@ -1,8 +1,12 @@
-// include DankMaterialShell stuff
-include "dms.kdl"
+
+// TIP: Please leave this file as it is and put your custom settings in "local.kdl" (which you can create if it doesn't exist). 
+// TIP: Leave irin.kdl as first include, so that you can override any of its settings via DMS or local.kdl if you want to.
 
 // include top-level settings from the system-wide default config
 include "/usr/share/gabos/gdots/system/niri/irin.kdl"
+
+// include DankMaterialShell stuff
+include "dms.kdl"
 
 // include local user overrides
 include optional=true "local.kdl"

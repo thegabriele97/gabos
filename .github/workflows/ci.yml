@@ -1,0 +1,69 @@
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '05 10 * * *'   # 10:05 UTC daily
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+# Grant the superset of permissions needed across all called workflows.
+# Each reusable workflow's jobs further restrict what they actually use.
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+# ── gabos ─────────────────────────────────────────────────────────────────────
+
+jobs:
+  build_gabos:
+    name: Build gabos
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      image_name: gabos
+      containerfile: ./Containerfile
+      # Push only on real pushes to the default branch, not on PRs or forks
+      push_image: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+  diff_gabos:
+    name: Package diff gabos
+    needs: build_gabos
+    # Skip diff on PRs — there's nothing new on the registry to compare against
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: ./.github/workflows/package_diff.yml
+    secrets: inherit
+    with:
+      image_name: gabos
+
+# ── gabos-nvidia ──────────────────────────────────────────────────────────────
+
+#   build_gabos_nvidia:
+#     name: Build gabos-nvidia
+#     uses: ./.github/workflows/reusable/build.yml
+#     secrets: inherit
+#     with:
+#       image_name: gabos-nvidia
+#       containerfile: ./Containerfile.nvidia   # adjust path if needed
+#       push_image: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+#   diff_gabos_nvidia:
+#     name: Package diff gabos-nvidia
+#     needs: build_gabos_nvidia
+#     if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+#     uses: ./.github/workflows/package-diff.yml
+#     secrets: inherit
+#     with:
+#       image_name: gabos-nvidia

@@ -1,0 +1,170 @@
+# Reusable package diff workflow.
+# Called by ci.yml after a successful build via `uses: ./.github/workflows/package-diff.yml`.
+# Finds the two most recent YYYYMMDD-tagged builds of the given image on GHCR,
+# diffs their RPM package lists, and uploads a Markdown report as a workflow artifact.
+#
+# Inputs:
+#   image_name – image name on GHCR, must match what was passed to build.yml (required)
+#
+# Note: exits cleanly (no error) if fewer than two date-tagged builds exist yet.
+
+name: Package diff
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: 'Image name on GHCR (e.g. gabos, gabos-nvidia)'
+        required: true
+        type: string
+
+env:
+  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+
+jobs:
+  package_diff:
+    name: Diff DNF packages for ${{ inputs.image_name }}
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Lowercase image URI
+        run: |
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}"  >> "${GITHUB_ENV}"
+          echo "IMAGE_NAME=${{ inputs.image_name }}" >> "${GITHUB_ENV}"
+
+      # docker/login-action writes to ~/.docker/config.json, which both
+      # skopeo (--authfile) and podman (--authfile) will consume below.
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # List all pure YYYYMMDD tags and take the two most recent ones.
+      # Exits cleanly if there aren't two yet (first ever build of this image).
+      - name: Find date tags to compare
+        id: tags
+        run: |
+          DATE_TAGS=$(
+            skopeo list-tags \
+              --authfile ~/.docker/config.json \
+              "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" \
+            | jq -r '.Tags[] | select(test("^[0-9]{8}$"))' \
+            | sort -rn
+          )
+
+          CURRENT=$(echo "$DATE_TAGS"  | sed -n '1p')
+          PREVIOUS=$(echo "$DATE_TAGS" | sed -n '2p')
+
+          if [[ -z "$CURRENT" || -z "$PREVIOUS" ]]; then
+            echo "::notice::Need at least two date-tagged builds to diff ${IMAGE_NAME} — skipping."
+            exit 1
+          fi
+
+          echo "Comparing: ${PREVIOUS} → ${CURRENT}"
+          echo "current=${CURRENT}"   >> "$GITHUB_OUTPUT"
+          echo "previous=${PREVIOUS}" >> "$GITHUB_OUTPUT"
+
+      - name: Pull both images
+        run: |
+          AUTHFILE=~/.docker/config.json
+          podman pull --authfile "$AUTHFILE" "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.current }}"
+          podman pull --authfile "$AUTHFILE" "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.previous }}"
+
+      # Tab-separated queryformat makes name/version splitting unambiguous,
+      # since package names and version strings can both contain dashes.
+      - name: Extract RPM package lists
+        run: |
+          podman run --rm \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.current }}" \
+            rpm -qa --queryformat '%{NAME}\t%{VERSION}-%{RELEASE}.%{ARCH}\n' \
+            | sort > /tmp/packages_current.txt
+
+          podman run --rm \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.previous }}" \
+            rpm -qa --queryformat '%{NAME}\t%{VERSION}-%{RELEASE}.%{ARCH}\n' \
+            | sort > /tmp/packages_previous.txt
+
+      - name: Generate Markdown diff
+        env:
+          TAG_PREV: ${{ steps.tags.outputs.previous }}
+          TAG_CURR: ${{ steps.tags.outputs.current }}
+          IMAGE:    ${{ inputs.image_name }}
+        run: |
+          python3 - << 'PYEOF'
+          import os
+          from pathlib import Path
+
+          def parse(path):
+              pkgs = {}
+              for line in Path(path).read_text().splitlines():
+                  if "\t" in line:
+                      name, ver = line.split("\t", 1)
+                      pkgs[name] = ver
+              return pkgs
+
+          prev = parse("/tmp/packages_previous.txt")
+          curr = parse("/tmp/packages_current.txt")
+
+          added   = {k: curr[k] for k in curr if k not in prev}
+          removed = {k: prev[k] for k in prev if k not in curr}
+          updated = {
+              k: (prev[k], curr[k])
+              for k in curr
+              if k in prev and curr[k] != prev[k]
+          }
+
+          tag_prev = os.environ["TAG_PREV"]
+          tag_curr = os.environ["TAG_CURR"]
+          image    = os.environ["IMAGE"]
+
+          out = [
+              f"# Package diff — {image}: {tag_prev} → {tag_curr}",
+              "",
+              f"**{len(added)} added · {len(removed)} removed · {len(updated)} updated**",
+              "",
+          ]
+
+          if added:
+              out += [f"## ✅ Added ({len(added)})", ""]
+              out += [f"- `{k}` {added[k]}" for k in sorted(added)]
+              out.append("")
+
+          if removed:
+              out += [f"## ❌ Removed ({len(removed)})", ""]
+              out += [f"- `{k}` {removed[k]}" for k in sorted(removed)]
+              out.append("")
+
+          if updated:
+              out += [f"## 🔄 Updated ({len(updated)})", ""]
+              out += ["| Package | From | To |", "|---------|------|----|"]
+              out += [
+                  f"| `{k}` | {pv} | {cv} |"
+                  for k, (pv, cv) in sorted(updated.items())
+              ]
+              out.append("")
+
+          if not (added or removed or updated):
+              out.append("_No package changes detected between these two builds._")
+
+          report = "\n".join(out)
+          Path("/tmp/package-diff.md").write_text(report)
+          print(report)
+          PYEOF
+
+      # Pin actions/upload-artifact to a specific commit hash following
+      # the same convention as the other workflows in this repo.
+      - name: Upload diff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-diff-${{ inputs.image_name }}-${{ steps.tags.outputs.previous }}-to-${{ steps.tags.outputs.current }}
+          path: |
+            /tmp/package-diff.md
+            /tmp/packages_current.txt
+            /tmp/packages_previous.txt
+          retention-days: 90
