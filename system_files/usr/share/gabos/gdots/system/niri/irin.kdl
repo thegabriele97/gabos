@@ -340,6 +340,12 @@ window-rule {
     open-floating true
 }
 
+// Calculator apps open as floating by default, since they usually have a small window that doesn't need tiling.
+window-rule {
+    match app-id=r#"gnome-calculator$"#
+    open-floating true
+}
+
 window-rule {
     geometry-corner-radius 12
     clip-to-geometry true

@@ -17,6 +17,7 @@ dnf5.real -y install \
     file-roller \
     loupe \
     totem \
+    papers \
     gnome-calculator \
     xdg-user-dirs
 
@@ -110,6 +111,8 @@ plymouth-set-default-theme spinner
 # cat > /usr/lib/bootc/kargs.d/00-splash.toml << 'EOF'
 # kargs = ["quiet", "rhgb"]
 # EOF
+
+glib-compile-schemas /usr/share/glib-2.0/schemas
 
 ## CLEAN UP
 dnf5.real -y clean all

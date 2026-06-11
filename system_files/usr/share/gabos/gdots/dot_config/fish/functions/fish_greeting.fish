@@ -2,7 +2,7 @@ function fish_greeting
     set -l os_info  (cat /etc/os-release 2>/dev/null | grep ^PRETTY_NAME | cut -d= -f2 | tr -d '"')
     set -l kern     (uname -r)
     set -l uptime   (uptime | sed 's/.*up \([^,]*\), .*/\1/')
-    set -l ip       (ip -4 addr show enp42s0 2>/dev/null | grep -oP '(?<=inet\s)[\d.]+')
+    set -l ip       (hostname -I | awk '{print $1}')
     set -l ram      (free -h | awk '/^Mem:/{print $3"/"$2}')
 
     echo '                 '(set_color F00)'___
