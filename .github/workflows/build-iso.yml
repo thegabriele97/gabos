@@ -3,12 +3,24 @@ name: Build ISO
 
 on:
   workflow_dispatch:
+    inputs:
+      build-gabos:
+        description: 'Build ISO for gabos'
+        required: false
+        type: boolean
+        default: true
+      build-gabos-nvidia:
+        description: 'Build ISO for gabos-nvidia'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
 
     build-iso:
         name: Build ISO for 'gabos'
         uses: ./.github/workflows/build-iso-reusable.yml
+        if: ${{ github.event.inputs.build-gabos == 'true' }}
         with:
             image_name: gabos
             installer_dir: ./installer
@@ -16,6 +28,7 @@ jobs:
     build-iso-nvidia:
         name: Build ISO for 'gabos-nvidia'
         uses: ./.github/workflows/build-iso-reusable.yml
+        if: ${{ github.event.inputs.build-gabos-nvidia == 'true' }}
         with:
             image_name: gabos-nvidia
             installer_dir: ./installer
