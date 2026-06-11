@@ -27,7 +27,9 @@ dnf5.real -y install \
     neovim \
     kitty \
     fastfetch \
-    lolcat lsd bat fzf 
+    lolcat lsd bat bat-extras fzf delta ripgrep \
+    distrobox \
+    podman 
 
 dnf5.real -y install \
     rakuos-software-gtk

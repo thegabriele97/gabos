@@ -50,20 +50,20 @@ jobs:
 
 # ── gabos-nvidia ──────────────────────────────────────────────────────────────
 
-#   build_gabos_nvidia:
-#     name: Build gabos-nvidia
-#     uses: ./.github/workflows/reusable/build.yml
-#     secrets: inherit
-#     with:
-#       image_name: gabos-nvidia
-#       containerfile: ./Containerfile.nvidia   # adjust path if needed
-#       push_image: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+  build_gabos_nvidia:
+    name: Build gabos-nvidia
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      image_name: gabos-nvidia
+      containerfile: ./Containerfile.nvidia
+      push_image: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
-#   diff_gabos_nvidia:
-#     name: Package diff gabos-nvidia
-#     needs: build_gabos_nvidia
-#     if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-#     uses: ./.github/workflows/package-diff.yml
-#     secrets: inherit
-#     with:
-#       image_name: gabos-nvidia
+  diff_gabos_nvidia:
+    name: Package diff gabos-nvidia
+    needs: build_gabos_nvidia
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: ./.github/workflows/package_diff.yml
+    secrets: inherit
+    with:
+      image_name: gabos-nvidia
