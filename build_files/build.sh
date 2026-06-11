@@ -30,7 +30,9 @@ dnf5.real -y install \
     lolcat lsd bat fzf 
 
 dnf5.real -y install \
-    rakuos-software-qt
+    rakuos-software-gtk
+    #rakuos-software-qt
+
 
 # Nautilus open any terminal extension
 curl -Lo /etc/yum.repos.d/nautilus-open-any-terminal.repo \
@@ -39,8 +41,19 @@ curl -Lo /etc/yum.repos.d/nautilus-open-any-terminal.repo \
 dnf5.real install -y \
     nautilus-open-any-terminal
 
-glib-compile-schemas /usr/share/glib-2.0/schemas
-gsettings set com.github.stunkymonkey.nautilus-open-any-terminal terminal kitty
+glib-compile-schemas /usr/share/glib-2.0/schemas/
+# gsettings set com.github.stunkymonkey.nautilus-open-any-terminal terminal kitty
+# 1. Crea la directory per gli override locali se non esiste
+mkdir -p /etc/dconf/db/local.d/
+
+# 2. Scrivi la configurazione desiderata
+cat > /etc/dconf/db/local.d/00-nautilus-terminal << EOF
+[com/github/stunkymonkey/nautilus-open-any-terminal]
+terminal='kitty'
+EOF
+
+# 3. Aggiorna il database dconf di sistema
+dconf update
 
 ### DESKTOP ENVIRONMENT
 
@@ -81,6 +94,9 @@ jq '.transports.docker["ghcr.io/thegabriele97"] = [{"type": "insecureAcceptAnyth
     /etc/containers/policy.json > /tmp/policy.json
 mv /tmp/policy.json /etc/containers/policy.json
 
+
+glib-compile-schemas /usr/share/glib-2.0/schemas/
+
 dnf5.real -y remove \
     waybar
 
@@ -111,8 +127,6 @@ plymouth-set-default-theme spinner
 # cat > /usr/lib/bootc/kargs.d/00-splash.toml << 'EOF'
 # kargs = ["quiet", "rhgb"]
 # EOF
-
-glib-compile-schemas /usr/share/glib-2.0/schemas
 
 ## CLEAN UP
 dnf5.real -y clean all
