@@ -1,0 +1,139 @@
+# Reusable ISO build workflow.
+# Called by iso.yml (manual dispatch) or any other orchestrator.
+#
+# Inputs:
+#   image_name    – image to pull from GHCR and bake into the ISO, e.g. gabos or gabos-nvidia  (required)
+#   installer_dir – directory containing the installer Containerfile                            (default: ./installer)
+#   compression   – squashfs or erofs                                                           (default: squashfs)
+#   kargs         – extra kernel args, comma-separated, or NONE                                 (default: NONE)
+
+name: Build ISO
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: 'Image name on GHCR (e.g. gabos, gabos-nvidia)'
+        required: true
+        type: string
+      installer_dir:
+        description: 'Directory containing the installer Containerfile'
+        required: false
+        type: string
+        default: './installer'
+      compression:
+        description: 'squashfs or erofs'
+        required: false
+        type: string
+        default: 'squashfs'
+      kargs:
+        description: 'Extra kernel args (NONE or comma-separated list)'
+        required: false
+        type: string
+        default: 'NONE'
+
+jobs:
+  build-iso:
+    name: Build ISO for ${{ inputs.image_name }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y podman
+
+      - name: Show disk space (before cleanup)
+        run: sudo df -h
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+
+      - name: Show disk space (after cleanup)
+        run: sudo df -h
+
+      # Mount a btrfs-compressed loopback device as podman's storage root so
+      # large layers don't exhaust the runner's default ext4 partition.
+      - name: Mount container storage btrfs loopback
+        run: |
+          sudo truncate -s 70G /mnt/podman-storage.img
+          sudo mkfs.btrfs -f /mnt/podman-storage.img
+          sudo podman system reset --force
+          sudo systemctl stop podman.service
+          sudo mount -o compress-force=zstd:1 /mnt/podman-storage.img /var/lib/containers/storage
+          sudo systemctl start podman.service
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull base image
+        run: |
+          sudo podman pull ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:latest
+          sudo podman images
+          echo "Disk space after pull:"
+          df -h
+
+      # Save as oci-archive so the installer Containerfile can use it as a
+      # local base (avoids a second registry pull inside the build).
+      - name: Save image as oci-archive
+        run: |
+          sudo podman save --format oci-archive \
+            ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:latest \
+            -o ${{ inputs.installer_dir }}/base-image.oci.tar
+          echo "Disk space after save:"
+          df -h
+
+      - name: Build installer image
+        run: |
+          sudo podman build \
+            --cap-add sys_admin \
+            --security-opt label=disable \
+            --squash \
+            -t localhost/${{ inputs.image_name }}_installer:latest \
+            --build-arg BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:latest \
+            ${{ inputs.installer_dir }}/
+          echo "Disk space after installer build:"
+          df -h
+
+      - name: Remove oci-archive
+        run: |
+          rm -f ${{ inputs.installer_dir }}/base-image.oci.tar
+          echo "Disk space after oci-archive removal:"
+          df -h
+
+      - name: Build ISO with Titanoboa
+        id: iso_build_titanoboa
+        uses: thegabriele97/titanoboa@v1
+        with:
+          image-ref: localhost/${{ inputs.image_name }}_installer:latest
+          iso-dest: output/${{ inputs.image_name }}-${{ github.run_number }}.iso
+          # compression: ${{ inputs.compression }}
+          # kargs: ${{ inputs.kargs }}
+
+      - name: Move ISOs to upload directory
+        id: upload-directory
+        run: |
+          ISO_UPLOAD_DIR=${{ github.workspace }}/upload
+          ISO_PATH=${{ steps.iso_build_titanoboa.outputs.iso-dest }}
+          ISO_NAME=$(basename "${ISO_PATH}")
+          mkdir -p "${ISO_UPLOAD_DIR}"
+          mv "${ISO_PATH}" "${ISO_UPLOAD_DIR}"
+          (cd "${ISO_UPLOAD_DIR}" && sha256sum "${ISO_NAME}" | tee "${ISO_NAME}-CHECKSUM")
+          echo "iso-upload-dir=${ISO_UPLOAD_DIR}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.image_name }}-iso-${{ github.run_number }}
+          path: ${{ steps.upload-directory.outputs.iso-upload-dir }}
+          retention-days: 10
+          if-no-files-found: error

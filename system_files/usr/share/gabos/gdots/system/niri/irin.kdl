@@ -339,13 +339,24 @@ window-rule {
     match app-id=r#"firefox$"# title="^Picture-in-Picture$"
     open-floating true
 
-    default-floating-position x=32 y=32 relative-to="bottom-left"
+    default-floating-position x=32 y=32 relative-to="bottom-right"
 }
 
 // Calculator apps open as floating by default, since they usually have a small window that doesn't need tiling.
 window-rule {
     match app-id=r#"[cC]alculator$"#
     open-floating true
+}
+
+window-rule {
+    match title="xeyes"
+
+    open-floating true
+    open-focused false
+
+    default-window-height {fixed 150}
+    default-window-width {fixed 200}
+    defaul-floating-position x=100 y=50 relative-to="top-right"
 }
 
 // Open firefox app as maximized by default

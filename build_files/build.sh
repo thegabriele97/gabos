@@ -8,7 +8,10 @@ sed -i '/^\[main\]/a max_parallel_downloads=10' /etc/dnf/dnf.conf
 
 ### Install packages
 dnf5.real -y install \
-    jq
+    jq \
+    curl \
+    git \
+    xeyes
 
 ### BASE PACKAGES
 dnf5.real -y install \
@@ -28,6 +31,7 @@ dnf5.real -y install \
     kitty \
     fastfetch \
     lolcat lsd bat bat-extras fzf delta ripgrep \
+    yazi \
     distrobox \
     podman 
 

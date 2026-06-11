@@ -1,117 +1,22 @@
+
 name: Build ISO
 
 on:
-  workflow_dispatch:
-    inputs:
-      compression:
-        description: 'Compression (squashfs|erofs)'
-        required: false
-        default: 'squashfs'
-      kargs:
-        description: 'Extra kernel args (NONE o comma-separated)'
-        required: false
-        default: 'NONE'
+  workflow_call:
 
 jobs:
-  build-iso:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
 
-    steps:
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y podman
-
-      - name: Show disk space (before)
-        run: sudo df -h
-
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-
-      - name: Show disk space (after)
-        run: sudo df -h
-
-      - name: Mount Container Storage BTRFS Loopback
-        run: |
-          sudo truncate -s 70G /mnt/podman-storage.img
-          sudo mkfs.btrfs -f /mnt/podman-storage.img
-          sudo podman system reset --force
-          sudo systemctl stop podman.service
-          sudo mount -o compress-force=zstd:1 /mnt/podman-storage.img /var/lib/containers/storage
-          sudo systemctl start podman.service
-
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      # - name: Maximize build space
-      #   uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
-
-      - name: Login to GHCR
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io \
-            -u "${{ github.actor }}" --password-stdin
-
-      - name: Pull immagine remota 
-        run: |
-          sudo podman pull ghcr.io/thegabriele97/gabos:latest
-          sudo podman images
-          echo "Available disk space after pulling:"
-          df -h
-
-      - name: Salva immagine come oci-archive
-        run: |
-          sudo podman save --format oci-archive \
-            ghcr.io/thegabriele97/gabos:latest \
-            -o installer/base-image.oci.tar
-          echo "Available disk space after saving image:"
-          df -h
-
-      - name: Build gabos_installer
-        run: |
-          sudo podman build \
-            --cap-add sys_admin \
-            --security-opt label=disable \
-            --squash \
-            -t localhost/gabos_installer:latest \
-            --build-arg BASE_IMAGE=ghcr.io/thegabriele97/gabos:latest \
-            installer/
-          echo "Available disk space after building installer image:"
-          df -h
-
-      - name: Rimuovi oci-archive
-        run: |
-          rm -f installer/base-image.oci.tar
-          echo "Available disk space after removing oci-archive:"
-          df -h
-
-      - name: Build ISO with Titanoboa
-        id: iso_build_titanoboa
-        uses: thegabriele97/titanoboa@v1
+    build-iso:
+        name: Build ISO for 'gabos'
+        uses: ./.github/workflows/build-iso-reusable.yml
         with:
-          image-ref: localhost/gabos_installer:latest
-          iso-dest: output/gabos-${{ github.run_number }}.iso
+            image_name: gabos
+            installer_dir: ./installer
 
-      - name: Move ISOs to Upload Directory
-        id: upload-directory
-        shell: bash
-        run: |
-          ISO_UPLOAD_DIR=${{ github.workspace }}/upload
-          ISO_PATH=${{ steps.iso_build_titanoboa.outputs.iso-dest }}
-          ISO_NAME=$(basename ${ISO_PATH})
-
-          mkdir -p ${ISO_UPLOAD_DIR}
-          mv ${ISO_PATH} ${ISO_UPLOAD_DIR}
-          (cd ${ISO_UPLOAD_DIR} && sha256sum ${ISO_NAME} | tee ${ISO_NAME}-CHECKSUM)
-          echo "iso-upload-dir=${ISO_UPLOAD_DIR}" >> $GITHUB_OUTPUT
-
-      - name: Upload ISO Artifact
-        uses: actions/upload-artifact@v4
+    build-iso-nvidia:
+        name: Build ISO for 'gabos-nvidia'
+        uses: ./.github/workflows/build-iso-reusable.yml
         with:
-          name: gabos-iso-${{ github.run_number }}
-          path: ${{ steps.upload-directory.outputs.iso-upload-dir }}
-          retention-days: 10
-          if-no-files-found: error
+            image_name: gabos-nvidia
+            installer_dir: ./installer-nvidia
+
