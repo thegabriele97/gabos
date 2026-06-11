@@ -35,7 +35,7 @@ on:
 jobs:
   build-iso:
     name: Build ISO for ${{ inputs.image_name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     permissions:
       contents: read
@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y podman
+          sudo apt-get install -y podman btrfs-progs
 
       - name: Show disk space (before cleanup)
         run: sudo df -h
