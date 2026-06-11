@@ -18,5 +18,5 @@ jobs:
         uses: ./.github/workflows/build-iso-reusable.yml
         with:
             image_name: gabos-nvidia
-            installer_dir: ./installer-nvidia
+            installer_dir: ./installer
 
