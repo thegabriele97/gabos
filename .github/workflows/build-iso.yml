@@ -2,7 +2,7 @@
 name: Build ISO
 
 on:
-  workflow_call:
+  workflow_dispatch:
 
 jobs:
 
