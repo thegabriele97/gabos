@@ -12,16 +12,18 @@ dnf5.real -y install \
 
 ### BASE PACKAGES
 dnf5.real -y install \
-    fish \
-    vim \
-    neovim \
     firefox \
     nautilus \
     file-roller \
     loupe \
-    totem
+    totem \
+    gnome-calculator \
+    xdg-user-dirs
 
 dnf5.real -y install \
+    fish \
+    vim \
+    neovim \
     kitty \
     fastfetch \
     lolcat lsd bat fzf 
