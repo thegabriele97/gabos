@@ -12,6 +12,9 @@ on:
       - main
     paths-ignore:
       - '**/README.md'
+      - '**/installer/**'
+      - '**/.github/workflows/build-iso-reusable.yml'
+      - '**/.github/workflows/build-iso.yml'
   workflow_dispatch:
 
 concurrency:

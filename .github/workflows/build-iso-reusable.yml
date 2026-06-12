@@ -50,8 +50,11 @@ jobs:
       - name: Show disk space (before cleanup)
         run: sudo df -h
 
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+      # - name: Free disk space
+      #   uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
       - name: Show disk space (after cleanup)
         run: sudo df -h
@@ -60,11 +63,11 @@ jobs:
       # large layers don't exhaust the runner's default ext4 partition.
       - name: Mount container storage btrfs loopback
         run: |
-          sudo truncate -s 150G /mnt/podman-storage.img
+          sudo truncate -s 70G /mnt/podman-storage.img
           sudo mkfs.btrfs -f /mnt/podman-storage.img
           sudo podman system reset --force
           sudo systemctl stop podman.service
-          sudo mount -o compress-force=zstd:5 /mnt/podman-storage.img /var/lib/containers/storage
+          sudo mount -o compress-force=zstd:1 /mnt/podman-storage.img /var/lib/containers/storage
           sudo systemctl start podman.service
 
       - name: Checkout

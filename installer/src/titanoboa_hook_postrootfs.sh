@@ -10,16 +10,21 @@ cat > /etc/containers/policy.json <<'EOF'
 {"default": [{"type": "insecureAcceptAnything"}]}
 EOF
 
-podman load -i /tmp/base-image.oci.tar
+podman load -i /tmp/host_installer/base-image.oci.tar
 #skopeo copy \
 #	--insecure-policy \
 #	--dest-storage-opt ignore_chown_errors=true \
-#	docker-archive:/tmp/base-image.oci.tar  \
+#	docker-archive:/tmp/host_installer/base-image.oci.tar  \
 #	containers-storage:localhost/image-template:latest \
 
 # Prune unused data, keep loaded image
 podman system prune -f
-# rm -f /tmp/base-image.oci.tar
+podman system df 
+ls -lh /tmp/host_installer/
+rm -f /tmp/host_installer/base-image.oci.tar
+ls -lh /tmp/host_installer/
+df -h
+df -ah
 
 echo "================================================================================"
 podman images

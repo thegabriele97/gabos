@@ -7,7 +7,7 @@ set -exo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # List -l base image tar
-ls -l /tmp/base-image.oci.tar
+ls -lh /tmp/host_installer/
 
 # Create the directory that /root is symlinked to
 mkdir -p "$(realpath /root)"

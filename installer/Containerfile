@@ -7,7 +7,7 @@ FROM ${BASE_IMAGE}
 # COPY base-image.oci.tar /tmp/base-image.oci.tar
 
 COPY ./src /src
-RUN --mount=type=cache,target=/var/tmp/libdnf5,id=libdnf5 --mount=type=bind,source=./base-image.oci.tar,destination=/tmp/base-image.oci.tar /src/build.sh
+RUN --mount=type=cache,target=/var/tmp/libdnf5,id=libdnf5 --mount=type=bind,source=./,destination=/tmp/host_installer/,rw=true /src/build.sh
 
 
 RUN rm -fr /src
