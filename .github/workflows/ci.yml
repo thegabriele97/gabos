@@ -56,6 +56,7 @@ jobs:
   build_gabos_nvidia:
     name: Build gabos-nvidia
     uses: ./.github/workflows/build.yml
+    needs: build_gabos # Build one image at a time to reduce load on remote registry and avoid hitting rate limits
     secrets: inherit
     with:
       image_name: gabos-nvidia
