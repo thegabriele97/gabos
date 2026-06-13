@@ -354,9 +354,9 @@ window-rule {
     open-floating true
     open-focused false
 
-    default-window-height {fixed 150}
-    default-window-width {fixed 200}
-    defaul-floating-position x=100 y=50 relative-to="top-right"
+    default-window-height { fixed 150; }
+    default-column-width { fixed 200; }
+    default-floating-position x=100 y=50 relative-to="top-right"
 }
 
 // Open firefox app as maximized by default
