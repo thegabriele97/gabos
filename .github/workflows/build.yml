@@ -111,16 +111,16 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
-      - name: Extract base image from Containerfile
-        run: |
-          echo "BASE_IMAGE=$(cat ${{ inputs.containerfile }} | grep -i FROM | head -n 2 | tail -n 1 | cut -d' ' -f2)" >> ${GITHUB_ENV}
+      # - name: Extract base image from Containerfile
+      #   run: |
+      #     echo "BASE_IMAGE=$(cat ${{ inputs.containerfile }} | grep -i FROM | head -n 2 | tail -n 1 | cut -d' ' -f2)" >> ${GITHUB_ENV}
 
-      - name: Cache Podman Images
-        uses: ./.github/actions/podman-cache
-        with:
-          use-sudo: 'false'
-          images: |
-            ${{ env.BASE_IMAGE }}
+      # - name: Cache Podman Images
+      #   uses: ./.github/actions/podman-cache
+      #   with:
+      #     use-sudo: 'false'
+      #     images: |
+      #       ${{ env.BASE_IMAGE }}
 
       - name: Build Image
         id: build_image
@@ -155,9 +155,9 @@ jobs:
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
 
-      - name: Trigger local cache update
-        uses: ./.github/actions/podman-cache
-        with:
-          use-sudo: 'false'
-          images: |
-            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}
+      # - name: Trigger local cache update
+      #   uses: ./.github/actions/podman-cache
+      #   with:
+      #     use-sudo: 'false'
+      #     images: |
+      #       ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}

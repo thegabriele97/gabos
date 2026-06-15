@@ -110,15 +110,16 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io \
             -u "${{ github.actor }}" --password-stdin
 
-      - name: Cache Container Images
-        id: cache-container-images
-        uses: jamesmortensen/cache-container-images-action@v1.0.1
-        with:
-          images: |
-            ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:latest
+      # - name: Cache Container Images
+      #   id: cache-container-images
+      #   uses: jamesmortensen/cache-container-images-action@v1.0.1
+      #   with:
+      #     images: |
+      #       ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:latest
 
       - name: Pull base image
         run: |
+          sudo podman pull ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:latest
           sudo podman images
           echo "Disk space after pull:"
           df -h
