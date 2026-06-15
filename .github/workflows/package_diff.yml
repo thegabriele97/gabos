@@ -73,11 +73,13 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
-      - name: Pull both images
-        run: |
-          AUTHFILE=~/.docker/config.json
-          podman pull --authfile "$AUTHFILE" "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.current }}"
-          podman pull --authfile "$AUTHFILE" "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.previous }}"
+      - name: Cache Container Images
+        id: cache-container-images
+        uses: jamesmortensen/cache-container-images-action@v1.0.1
+        with:
+          images: |
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.current }}"
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.previous }}"
 
       # Tab-separated queryformat makes name/version splitting unambiguous,
       # since package names and version strings can both contain dashes.

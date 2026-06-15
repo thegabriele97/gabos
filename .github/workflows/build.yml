@@ -111,13 +111,16 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
+      - name: Extract base image from Containerfile
+        run: |
+          echo "BASE_IMAGE=$(cat ${{ inputs.containerfile }} | grep -i FROM | head -n 2 | tail -n 1 | cut -d' ' -f2)" >> ${GITHUB_ENV}
+
       - name: Cache Container Images
         id: cache-container-images
         uses: jamesmortensen/cache-container-images-action@v1.0.1
         with:
           images: |
-            quay.io/rakuos/rakuos-base:latest
-            quay.io/rakuos/rakuos-base-nvidia:latest
+            ${{ env.BASE_IMAGE }}
 
       - name: Build Image
         id: build_image
