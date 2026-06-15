@@ -1,0 +1,90 @@
+name: 'Universal Multi-Registry Podman Cache'
+description: 'Cache Podman images across rootless and rootful workflows using Skopeo'
+author: 'Your Name'
+inputs:
+  images:
+    description: 'Lista di immagini separate da spazio (es: ghcr.io/user/repo:latest quay.io/org/img:v1)'
+    required: true
+  use-sudo:
+    description: 'Imposta a "true" nei workflow dove usi "sudo podman"'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Genera una Cache Key dinamica
+      shell: bash
+      id: generate-key
+      env:
+        # Passiamo l'input a Bash come variabile d'ambiente sicura
+        IMAGES_LIST: ${{ inputs.images }}
+      run: |
+        HASH_STRING=""
+        
+        # Ora il ciclo for legge la variabile ed è immune da errori di sintassi
+        for img in $IMAGES_LIST; do
+          echo "Recupero il digest remoto per: $img"
+          
+          # Interroga il registry
+          DIGEST=$(skopeo inspect docker://$img --format "{{.Digest}}" 2>/dev/null || echo "fallback-$(echo $img | tr '/:' '__')")
+          
+          echo "Digest trovato: $DIGEST"
+          HASH_STRING="${HASH_STRING}-${img}-${DIGEST}"
+        done
+        
+        if [ "${{ inputs.is-local }}" = "true" ]; then
+          echo "cache-key=podman-local-${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "cache-restore-key=podman-local-${{ github.ref_name }}-" >> $GITHUB_OUTPUT
+        else
+          KEY_HASH=$(echo -n "$HASH_STRING" | sha256sum | cut -d' ' -f1)
+          echo "cache-key=podman-remote-${KEY_HASH}" >> $GITHUB_OUTPUT
+          echo "cache-restore-key=" >> $GITHUB_OUTPUT
+        fi
+        
+        # Salva la lista nel file temporaneo per gli step successivi
+        echo "$IMAGES_LIST" | tr ' ' '\n' > .podman-images-list.txt
+
+    - name: Verifica / Ripristina la Cache di GitHub
+      id: github-cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/podman-cache-dir
+        key: ${{ steps.generate-key.outputs.cache-key }}
+
+    - name: Carica le immagini nello storage di Podman (In caso di Cache Hit)
+      if: steps.github-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        CMD_PREFIX=""
+        if [ "${{ inputs.use-sudo }}" = "true" ]; then CMD_PREFIX="sudo"; fi
+        
+        echo "Cache HIT! Ripristino le immagini in Podman..."
+        for tarfile in /tmp/podman-cache-dir/*.tar; do
+          if [ -f "$tarfile" ]; then
+            echo "Caricamento di $tarfile..."
+            $CMD_PREFIX podman load -i "$tarfile"
+          fi
+        done
+
+    - name: Pull e Salvataggio in Cache (In caso di Cache Miss)
+      if: steps.github-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        CMD_PREFIX=""
+        if [ "${{ inputs.use-sudo }}" = "true" ]; then CMD_PREFIX="sudo"; fi
+        
+        mkdir -p /tmp/podman-cache-dir
+        
+        while read -r img; do
+          if [ -z "$img" ]; then continue; fi
+          
+          echo "Cache MISS. Download di $img in corso..."
+          $CMD_PREFIX podman pull "$img"
+          
+          # Sostituisce i caratteri speciali per creare un nome file valido
+          SAFE_NAME=$(echo "$img" | tr '/:' '__')
+          
+          echo "Esportazione di $img in corso..."
+          $CMD_PREFIX podman save --format oci-archive "$img" -o "/tmp/podman-cache-dir/${SAFE_NAME}.tar"
+        done < .podman-images-list.txt

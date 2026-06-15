@@ -115,10 +115,10 @@ jobs:
         run: |
           echo "BASE_IMAGE=$(cat ${{ inputs.containerfile }} | grep -i FROM | head -n 2 | tail -n 1 | cut -d' ' -f2)" >> ${GITHUB_ENV}
 
-      - name: Cache Container Images
-        id: cache-container-images
-        uses: jamesmortensen/cache-container-images-action@v1.0.1
+      - name: Cache Podman Images
+        uses: ./.github/actions/podman-cache
         with:
+          use-sudo: 'false'
           images: |
             ${{ env.BASE_IMAGE }}
 
@@ -154,3 +154,10 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
+
+      - name: Trigger local cache update
+        uses: ./.github/actions/podman-cache
+        with:
+          use-sudo: 'false'
+          images: |
+            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}

@@ -31,6 +31,10 @@ jobs:
       packages: read
 
     steps:
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
       - name: Lowercase image URI
         run: |
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}"  >> "${GITHUB_ENV}"
@@ -73,10 +77,10 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
-      - name: Cache Container Images
-        id: cache-container-images
-        uses: jamesmortensen/cache-container-images-action@v1.0.1
+      - name: Cache Podman Images
+        uses: ./.github/actions/podman-cache
         with:
+          use-sudo: 'false'
           images: |
             ${{env.IMAGE_REGISTRY}}/${{env.IMAGE_NAME}}:${{ steps.tags.outputs.current }}
             ${{env.IMAGE_REGISTRY}}/${{env.IMAGE_NAME}}:${{ steps.tags.outputs.previous }}
