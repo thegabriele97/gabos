@@ -20,6 +20,7 @@ jobs:
     build-iso:
         name: Build ISO for 'gabos'
         uses: ./.github/workflows/build-iso-reusable.yml
+        secrets: inherit
         if: ${{ github.event.inputs.build-gabos == 'true' }}
         with:
             image_name: gabos
@@ -28,6 +29,7 @@ jobs:
     build-iso-nvidia:
         name: Build ISO for 'gabos-nvidia'
         uses: ./.github/workflows/build-iso-reusable.yml
+        secrets: inherit
         if: ${{ github.event.inputs.build-gabos-nvidia == 'true' }}
         with:
             image_name: gabos-nvidia
