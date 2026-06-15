@@ -31,7 +31,7 @@ podman images
 echo "================================================================================"
 
 # Install gparted
-dnf5.real install gparted
+dnf5.real -y install gparted
 
 # Installa Anaconda
 dnf5.real install -qy --allowerasing anaconda-live libblockdev-{btrfs,lvm,dm}
