@@ -41,7 +41,7 @@ jobs:
         run: |
           echo "Test upload from GitHub Actions - $(date)" > test-upload.txt
 
-      - name: Upload dummy file to Nextcloud
+      - name: Upload dummy file to remote server storage
         run: |
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -u "${{ secrets.NC_USER }}:${{ secrets.NC_PASSWORD }}" \
@@ -54,7 +54,7 @@ jobs:
           fi
           echo "✅ Upload successful!"
 
-      - name: Cleanup dummy file from Nextcloud
+      - name: Cleanup dummy file from remote server storage
         run: |
           curl -s -o /dev/null \
             -u "${{ secrets.NC_USER }}:${{ secrets.NC_PASSWORD }}" \
