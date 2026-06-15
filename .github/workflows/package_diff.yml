@@ -78,8 +78,8 @@ jobs:
         uses: jamesmortensen/cache-container-images-action@v1.0.1
         with:
           images: |
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.current }}"
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ steps.tags.outputs.previous }}"
+            ${{env.IMAGE_REGISTRY}}/${{env.IMAGE_NAME}}:${{ steps.tags.outputs.current }}
+            ${{env.IMAGE_REGISTRY}}/${{env.IMAGE_NAME}}:${{ steps.tags.outputs.previous }}
 
       # Tab-separated queryformat makes name/version splitting unambiguous,
       # since package names and version strings can both contain dashes.
