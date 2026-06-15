@@ -133,6 +133,27 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
 
+      - name: Test
+        run: |
+          podman system service --time=0 unix:///tmp/podman.socket &
+
+          while [ ! -S /tmp/podman.socket ]; do
+            echo "Waiting for Podman Socket to respond..."
+            sleep 1
+          done
+
+          export DOCKER_HOST=unix:///tmp/podman.socket
+          docker images
+          curl -LO https://github.com/GoogleContainerTools/container-structure-test/releases/latest/download/container-structure-test-linux-amd64 \
+            && chmod +x container-structure-test-linux-amd64  \
+            && mkdir -p $HOME/bin \
+            && export PATH=$PATH:$HOME/bin \
+            && mv container-structure-test-linux-amd64 $HOME/bin/container-structure-test 
+          $HOME/bin/container-structure-test test \
+            --driver docker \
+            --image localhost/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }} \
+            --config tests/gabos-structure-test.yml
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)

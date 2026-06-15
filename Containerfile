@@ -39,10 +39,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
 COPY system_files/ /
     
-RUN sed -i 's/^NAME=.*/NAME="GabOS"/' /etc/os-release
-RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="GabOS 44 '"$(date +%Y-%m-%d)"'"/' /etc/os-release
-RUN sed -i 's/^ID=.*/ID=fedora/' /etc/os-release
-
 ### LINTING
 ## Verify final image and contents are correct.
 RUN bootc container lint

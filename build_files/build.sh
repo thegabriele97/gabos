@@ -2,9 +2,15 @@
 
 set -ouex pipefail
 
+## Modify os-release
+sed -i 's/^NAME=.*/NAME="GabOS"/' /etc/os-release
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="GabOS 44 '"$(date +%Y%m%d)"'"/' /etc/os-release
+sed -i 's/^ID=.*/ID=fedora/' /etc/os-release
+
+cat /etc/os-release
+
 ## DNF5 Speedup
 sed -i '/^\[main\]/a max_parallel_downloads=10' /etc/dnf/dnf.conf
-
 
 ### Install packages
 dnf5.real -y install \

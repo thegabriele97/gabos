@@ -1,0 +1,39 @@
+# tests/gabos-structure-test.yaml
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "niri config is valid"
+    command: "niri"
+    args: ["validate", "-c", "/etc/skel/.config/niri/config.kdl"]
+    exitCode: 0
+
+  - name: "greetd binary present"
+    command: "which"
+    args: ["greetd"]
+    exitCode: 0
+
+  - name: "fish binary present"
+    command: "which"
+    args: ["fish"]
+    exitCode: 0
+
+  - name: "os-release has correct Name"
+    command: "bash"
+    args: ["-c", "grep -q '^NAME=\"GabOS\"' /etc/os-release"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "greetd config"
+    path: "/etc/greetd/config.toml"
+    shouldExist: true
+
+  - name: "niri config in skel"
+    path: "/etc/skel/.config/niri/config.kdl"
+    shouldExist: true
+
+  - name: "fish skel"
+    path: "/etc/skel/.config/fish/config.fish"
+    shouldExist: true
+
+# metadataTest:
+#   cmd: ["/sbin/init"]
