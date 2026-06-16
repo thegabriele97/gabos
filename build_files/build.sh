@@ -2,6 +2,32 @@
 
 set -ouex pipefail
 
+## Restoring RakuOS stuff we don't like
+
+# Restoring coreutils as defaults
+# First mv
+/usr/sbin/gnu_mv /usr/sbin/gnu_mv /usr/sbin/mv
+for _gnu in /usr/bin/gnu_* /usr/sbin/gnu_*; do \
+    [ -f "$_gnu" ] || continue; \
+    # Estrae solo il nome del file (es. gnu_arch)
+    _base=$(basename "$_gnu"); \
+    # Rimuove il prefisso gnu_ (es. arch)
+    _name="${_base#gnu_}"; \
+    # Determina la cartella di origine attuale (sarà /usr/bin o /usr/sbin)
+    _dir=$(dirname "$_gnu"); \
+    \
+    echo "Restoring original coreutil: $_dir/$_name"; \
+    rm -f "$_dir/$_name"; \
+    mv "$_gnu" "$_dir/$_name"; \
+done
+
+# Restoring rpm-ostree and remove its wrapper
+rm -f /usr/bin/rpm-ostree
+mv /usr/bin/rpm-ostree.real /usr/bin/rpm-ostree
+
+dnf5.real -y remove \
+    uutils-coreutils
+
 ## Modify os-release
 sed -i 's/^NAME=.*/NAME="GabOS"/' /etc/os-release
 sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="GabOS 44 '"$(date +%Y%m%d)"'"/' /etc/os-release

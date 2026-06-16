@@ -22,6 +22,11 @@ commandTests:
     args: ["-c", "grep -q '^NAME=\"GabOS\"' /etc/os-release"]
     exitCode: 0
 
+  - name: "ensure GNU coreutils are native (not uutils)"
+    command: "cp"
+    args: ["--version"]
+    expectedOutput: [".*GNU coreutils.*"]
+
 fileExistenceTests:
   - name: "greetd config"
     path: "/etc/greetd/config.toml"
