@@ -27,6 +27,12 @@ commandTests:
     args: ["--version"]
     expectedOutput: [".*GNU coreutils.*"]
 
+  - name: "rpm-ostree version check"
+    command: "rpm-ostree"
+    args: ["--version"]
+    exitCode: 0
+    expectedOutput: [".*rpm-ostree.*"]
+
 fileExistenceTests:
   - name: "greetd config"
     path: "/etc/greetd/config.toml"
