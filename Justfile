@@ -77,6 +77,9 @@ sudoif command *args:
 build $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
 
+    # Se la variabile $CONTAINER_FILE non è definita nell'ambiente, usa "Containerfile"
+    FILE_TO_BUILD="${CONTAINER_FILE:-Containerfile}"
+
     BUILD_ARGS=()
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
@@ -85,6 +88,7 @@ build $target_image=image_name $tag=default_tag:
     podman build \
         "${BUILD_ARGS[@]}" \
         --pull=newer \
+        -f "${FILE_TO_BUILD}" \
         --tag "${target_image}:${tag}" \
         .
 
