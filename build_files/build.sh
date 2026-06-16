@@ -56,6 +56,11 @@ dnf5.real -y install \
     gnome-calculator \
     xdg-user-dirs
 
+### Gaming stuff
+dnf5.real -y install \
+    gamescope
+
+### Terminal stuff
 dnf5.real -y install \
     fish \
     vim \
