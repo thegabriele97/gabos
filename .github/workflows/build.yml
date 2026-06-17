@@ -49,6 +49,9 @@ jobs:
     name: Build and push ${{ inputs.image_name }}
     # runs-on: ubuntu-24.04
     runs-on: [self-hosted, Linux, X64]
+    defaults:
+      run:
+        shell: bash    # ← vale per tutti gli step del job
     container: ubuntu:24.04
 
     outputs:
