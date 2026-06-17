@@ -71,7 +71,10 @@ dnf5.real -y install \
     wine \
     steam \
     lutris \
-    gamescope
+    gamescope \
+    gamemode \
+    mangohud \
+    lact
 
 ### Terminal stuff
 dnf5.real -y install \
@@ -84,6 +87,12 @@ dnf5.real -y install \
     yazi \
     distrobox \
     podman 
+
+### Various
+dnf5.real -y install \
+    timeshift \
+    openrgb \
+    obs-studio
 
 dnf5.real -y install \
     rakuos-software-gtk
