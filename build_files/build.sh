@@ -91,8 +91,7 @@ dnf5.real -y install \
 ### Various
 dnf5.real -y install \
     timeshift \
-    openrgb \
-    obs-studio
+    openrgb 
 
 dnf5.real -y install \
     rakuos-software-gtk
