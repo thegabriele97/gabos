@@ -43,7 +43,8 @@ dnf5.real -y install \
     jq \
     curl \
     git \
-    xeyes
+    xeyes \
+    wlr-randr 
 
 ### BASE PACKAGES
 dnf5.real -y install \
@@ -54,10 +55,22 @@ dnf5.real -y install \
     totem \
     papers \
     gnome-calculator \
+    gnome-system-monitor \
+    gnome-characters \
+    gnome-disk-utility \
     xdg-user-dirs
+
+### KVM
+dnf5.real -y install \
+    libvirt \
+    virt-manager \
+    qemu-kvm 
 
 ### Gaming stuff
 dnf5.real -y install \
+    wine \
+    steam \
+    lutris \
     gamescope
 
 ### Terminal stuff
@@ -122,6 +135,9 @@ systemctl enable --force greetd.service
 
 mkdir -p /etc/skel/.config/systemd/user/graphical-session.target.wants
 ln -s /usr/lib/systemd/user/dms.service /etc/skel/.config/systemd/user/graphical-session.target.wants/
+
+mkdir -p /etc/skel/.config/systemd/user/default.target.wants
+ln -s /usr/lib/systemd/user/default.target.wants/dsearch.service /etc/skel/.config/systemd/user/default.target.wants/
 
 ## USER FILES (DOT FILES)
 mkdir -p /etc/skel/.config
