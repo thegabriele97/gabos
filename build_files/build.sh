@@ -89,6 +89,11 @@ dnf5.real -y install \
     rakuos-software-gtk
     #rakuos-software-qt
 
+### VSCode
+rpm --import https://packages.microsoft.com/keys/microsoft.asc && 
+echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | tee /etc/yum.repos.d/vscode.repo > /dev/null
+
+dnf5.real -y install code
 
 # Nautilus open any terminal extension
 curl -Lo /etc/yum.repos.d/nautilus-open-any-terminal.repo \
@@ -153,12 +158,10 @@ jq '.transports.docker["ghcr.io/thegabriele97"] = [{"type": "insecureAcceptAnyth
     /etc/containers/policy.json > /tmp/policy.json
 mv /tmp/policy.json /etc/containers/policy.json
 
-
-glib-compile-schemas /usr/share/glib-2.0/schemas/
-
 dnf5.real -y remove \
     waybar
 
+glib-compile-schemas /usr/share/glib-2.0/schemas/
 
 # Packages can be installed from any enabled yum repo on the image.
 # RPMfusion repos are available by default in ublue main images
