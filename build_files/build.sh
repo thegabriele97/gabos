@@ -127,7 +127,7 @@ dconf update
 ### DESKTOP ENVIRONMENT
 
 # Niri
-dnf5.real -y install niri bibata-cursor-theme
+dnf5.real -y install niri bibata-cursor-theme adw-gtk3-theme
 
 # Dank Linux Shell
 sudo curl --output-dir "/etc/yum.repos.d/" --remote-name "https://copr.fedorainfracloud.org/coprs/avengemedia/dms/repo/fedora-$(rpm -E %fedora)/avengemedia-dms-fedora-$(rpm -E %fedora).repo"
