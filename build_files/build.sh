@@ -90,7 +90,6 @@ dnf5.real -y install \
 
 ### Various
 dnf5.real -y install \
-    timeshift \
     openrgb 
 
 dnf5.real -y install \
