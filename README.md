@@ -1,6 +1,7 @@
 # GabOS
 
 [![CI](https://github.com/thegabriele97/gabos/actions/workflows/ci.yml/badge.svg)](https://github.com/thegabriele97/gabos/actions/workflows/ci.yml)
+[![Build ISO](https://github.com/thegabriele97/gabos/actions/workflows/build-iso.yml/badge.svg)](https://github.com/thegabriele97/gabos/actions/workflows/build-iso.yml)
 [![GHCR](https://img.shields.io/badge/ghcr.io-thegabriele97%2Fgabos-blue?logo=github)](https://github.com/thegabriele97/gabos/pkgs/container/gabos)
 [![GHCR](https://img.shields.io/badge/ghcr.io-thegabriele97%2Fgabos--nvidia-blue?logo=github)](https://github.com/thegabriele97/gabos/pkgs/container/gabos-nvidia)
 
