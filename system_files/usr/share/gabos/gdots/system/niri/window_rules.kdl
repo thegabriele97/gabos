@@ -1,0 +1,82 @@
+
+// Window rules let you adjust behavior for individual windows.
+// Find more information on the wiki:
+// https://yalter.github.io/niri/Configuration:-Window-Rules
+
+// Work around WezTerm's initial configure bug
+// by setting an empty default-column-width.
+window-rule {
+    // This regular expression is intentionally made as specific as possible,
+    // since this is the default config, and we want no false positives.
+    // You can get away with just app-id="wezterm" if you want.
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+
+// Open the Firefox picture-in-picture player as floating by default.
+window-rule {
+    // This app-id regular expression will work for both:
+    // - host Firefox (app-id is "firefox")
+    // - Flatpak Firefox (app-id is "org.mozilla.firefox")
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+
+    default-floating-position x=32 y=32 relative-to="bottom-right"
+}
+
+// Calculator apps open as floating by default, since they usually have a small window that doesn't need tiling.
+window-rule {
+    match app-id=r#"[cC]alculator$"#
+    open-floating true
+}
+
+window-rule {
+    match title="xeyes"
+
+    open-floating true
+    open-focused false
+
+    default-window-height { fixed 150; }
+    default-column-width { fixed 200; }
+    default-floating-position x=100 y=50 relative-to="top-right"
+}
+
+// Open firefox app as maximized by default
+window-rule {
+    match app-id=r#"firefox$"#
+    open-maximized true
+}
+
+window-rule {
+
+    draw-border-with-background false // Needed to draw the focus-ring only without the rectangle background
+
+    geometry-corner-radius 12
+    clip-to-geometry true
+
+    opacity 0.85
+
+    background-effect {
+      blur true
+      xray false
+    }
+}
+
+// Example: block out two password managers from screen capture.
+// (This example rule is commented out with a "/-" in front.)
+/-window-rule {
+    match app-id=r#"^org\.keepassxc\.KeePassXC$"#
+    match app-id=r#"^org\.gnome\.World\.Secrets$"#
+
+    block-out-from "screen-capture"
+
+    // Use this instead if you want them visible on third-party screenshot tools.
+    // block-out-from "screencast"
+}
+
+// Example: enable rounded corners for all windows.
+// (This example rule is commented out with a "/-" in front.)
+// window-rule {
+//     geometry-corner-radius 12
+//     clip-to-geometry true
+// }
