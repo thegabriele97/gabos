@@ -38,6 +38,9 @@ cat /etc/os-release
 ## DNF5 Speedup
 sed -i '/^\[main\]/a max_parallel_downloads=10' /etc/dnf/dnf.conf
 
+### Enable Terra Repo
+sudo dnf5.real -y install --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release terra-gpg-keys
+
 ### Install packages
 dnf5.real -y install \
     jq \
