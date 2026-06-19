@@ -10,6 +10,24 @@ function _command_exists
     command -v "$argv[1]" >/dev/null 2>&1
 end
 
+# --- Aliases -----------------------------------------------------------------
+
+function cat --wraps=batcat --description 'alias cat=batcat'
+  bat $argv
+end
+
+function rcat --wraps=/bin/cat --description 'alias rcat=/bin/cat'
+  /bin/cat $argv
+end
+
+function v --wraps=nvim --description 'alias v=nvim'
+  nvim $argv
+end
+
+function ls --wraps=lsd --description 'alias ls=lsd'
+  lsd $argv
+end
+
 # --- Wrappers ----------------------------------------------------------------
 function fastfetch
     if test (count $argv) -eq 0
