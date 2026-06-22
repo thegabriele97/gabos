@@ -49,6 +49,9 @@ dnf5.real -y install \
     xeyes \
     wlr-randr 
 
+dnf5.real -y install \
+    dmemcg-booster
+
 ### BASE PACKAGES
 dnf5.real -y install \
     firefox \
