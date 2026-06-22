@@ -57,6 +57,7 @@ dnf5.real -y install \
     loupe \
     totem \
     papers \
+    baobab \
     gnome-calculator \
     gnome-system-monitor \
     gnome-characters \
