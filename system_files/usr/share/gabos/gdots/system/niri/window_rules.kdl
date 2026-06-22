@@ -31,7 +31,7 @@ window-rule {
 }
 
 window-rule {
-    match title="xeyes"
+    match title="xeyes" title="glxgears"
 
     open-floating true
     open-focused false
