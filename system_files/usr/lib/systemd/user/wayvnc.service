@@ -1,0 +1,19 @@
+[Unit]
+Description=WayVNC Remote Desktop Server (localhost-only)
+Documentation=man:wayvnc(1)
+# Si aggancia alla graphical session: parte con niri, muore con niri
+PartOf=graphical-session.target
+After=graphical-session.target
+Wants=wayvnc-monitor.service
+
+[Service]
+ExecStart=/usr/bin/wayvnc --config /usr/share/gabos/gdots/system/wayvnc/wayvnc.conf
+Restart=on-failure
+RestartSec=5
+# Log strutturato su journal
+StandardOutput=journal
+StandardError=journal
+#SyslogIdentifier=wayvnc
+
+[Install]
+WantedBy=graphical-session.target
