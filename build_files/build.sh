@@ -165,6 +165,8 @@ ln -s /usr/lib/systemd/user/dms.service /etc/skel/.config/systemd/user/graphical
 mkdir -p /etc/skel/.config/systemd/user/default.target.wants
 ln -s /usr/lib/systemd/user/default.target.wants/dsearch.service /etc/skel/.config/systemd/user/default.target.wants/
 
+ln -s /usr/lib64/libsensors.so.4 /usr/lib64/libsensors.so.5 # Needed for OpenRGB HW Monitor Plugin
+
 ## USER FILES (DOT FILES)
 mkdir -p /etc/skel/.config
 # cp -rf /ctx/dot_config/* /etc/skel/.config/
