@@ -1,0 +1,78 @@
+#!/bin/bash
+# wayvnc-monitor: logs wayvnc connection/disconnection events to journald
+# All echo output goes to stdout -> captured by systemd as journal entries
+# Read with: journalctl --user -t wayvnc-monitor -f
+set -euo pipefail
+
+RETRY_MAX=60   # max seconds to wait for wayvnc control socket
+RETRY_SLEEP=2
+
+log()  { echo "[INFO]  $*"; }
+warn() { echo "[WARN]  $*"; }
+err()  { echo "[ERROR] $*"; }
+
+# ── wait for wayvnc to expose its control socket ───────────────────────────────
+log "starting: waiting for wayvnc control socket (max ${RETRY_MAX}s)..."
+elapsed=0
+until wayvncctl version >/dev/null 2>&1; do
+    if (( elapsed >= RETRY_MAX )); then
+        err "timeout: wayvnc socket not available after ${RETRY_MAX}s, exiting"
+        exit 1
+    fi
+    sleep "${RETRY_SLEEP}"
+    (( elapsed += RETRY_SLEEP ))
+done
+
+# log wayvnc version at startup
+version=$(wayvncctl version 2>/dev/null || echo "n/a")
+log "connected to wayvnc — ${version}"
+
+# ── JSON event parsing ─────────────────────────────────────────────────────────
+parse_and_log() {
+    local line="$1"
+    [[ -z "$line" ]] && return
+
+    if ! command -v jq &>/dev/null; then
+        # fallback without jq: log raw event
+        log "EVENT_RAW: ${line}"
+        return
+    fi
+
+    local method
+    method=$(echo "$line" | jq -r '.method // "unknown"' 2>/dev/null) || {
+        warn "unparseable JSON: ${line}"
+        return
+    }
+
+    case "$method" in
+        client-connected)
+            local addr id username
+            addr=$(echo     "$line" | jq -r '.params.address  // .address  // "?"')
+            id=$(echo       "$line" | jq -r '.params.id       // .id       // "?"')
+            username=$(echo "$line" | jq -r '.params.username // .username // ""')
+            log "CLIENT_CONNECTED    id=${id} addr=${addr}${username:+ user=${username}}"
+            ;;
+        client-disconnected)
+            local id reason
+            id=$(echo     "$line" | jq -r '.params.id     // .id     // "?"')
+            reason=$(echo "$line" | jq -r '.params.reason // .reason // "connection closed"')
+            log "CLIENT_DISCONNECTED id=${id} reason=${reason}"
+            ;;
+        *)
+            # other events (resize, framerate, etc.) logged verbosely
+            log "EVENT [${method}]: ${line}"
+            ;;
+    esac
+}
+
+# ── subscribe to the event stream ─────────────────────────────────────────────
+log "subscribing to wayvncctl event-receive..."
+
+# wayvncctl event-receive blocks as long as wayvnc is running
+# if wayvnc dies, wayvncctl exits and systemd (BindsTo) handles the rest
+while IFS= read -r event_line; do
+    parse_and_log "$event_line"
+done < <(wayvncctl event-receive)
+
+warn "event stream ended (wayvnc stopped?)"
+exit 0

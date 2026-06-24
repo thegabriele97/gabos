@@ -1,0 +1,18 @@
+[Unit]
+Description=WayVNC Connection Monitor (wayvncctl event stream)
+Documentation=man:wayvncctl(1)
+# Muore e riparte insieme a wayvnc
+BindsTo=wayvnc.service
+After=wayvnc.service
+
+[Service]
+ExecStart=/usr/libexec/wayvnc-monitor
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+# Identità separata nel journal: journalctl -t wayvnc-monitor
+# SyslogIdentifier=wayvnc-monitor
+
+[Install]
+WantedBy=graphical-session.target

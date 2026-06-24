@@ -53,7 +53,8 @@ dnf5.real -y install \
     dmemcg-booster \
     cups-pk-helper \
     power-profiles-daemon \
-    kf6-kimageformats
+    kf6-kimageformats \
+    wayvnc
 
 ### BASE PACKAGES
 dnf5.real -y install \
@@ -156,6 +157,7 @@ ln -s /usr/lib/systemd/system/greetd.service /etc/systemd/system/display-manager
 systemctl enable --force greetd.service
 
 systemctl enable --force lactd.service
+systemctl enable --global wayvnc.service wayvnc-monitor.service
 
 mkdir -p /etc/skel/.config/systemd/user/graphical-session.target.wants
 ln -s /usr/lib/systemd/user/dms.service /etc/skel/.config/systemd/user/graphical-session.target.wants/
