@@ -9,7 +9,7 @@ dnf5.real -y install \
 echo -e "options nvidia NVreg_PreserveVideoMemoryAllocations=0\n\
 options nvidia NVreg_UseKernelSuspendNotifiers=1\n\
 options nvidia NVreg_TemporaryFilePath=/var/tmp" \
-    > /etc/modprobe.d/nvidia-pm.conf
+    > /etc/modprobe.d/zz-nvidia-pm.conf
 
 ## CLEAN UP
 dnf5.real -y clean all
